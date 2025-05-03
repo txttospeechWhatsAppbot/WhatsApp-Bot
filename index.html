@@ -1,26 +1,14 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>WhatsApp Bot</title>
-  <style>
-    body {
-      background-color: #f0f0f0;
-      font-family: Arial, sans-serif;
-      text-align: center;
-      margin-top: 50px;
-    }
-    h1 {
-      color: #333;
-    }
-    p {
-      color: #666;
-    }
-  </style>
+  <title>Keep Alive</title>
+  <script>
+    setInterval(() => {
+      fetch('/server.js'); // Replace with your backend endpoint
+    }, 600000); // Sends a request every 10 minutes
+  </script>
 </head>
 <body>
-  <h1>WhatsApp Bot is Active!</h1>
-  <p>This bot converts image text to audio and responds via WhatsApp.</p>
+  <h1>Backend Keep-Alive Page</h1>
 </body>
 </html>
