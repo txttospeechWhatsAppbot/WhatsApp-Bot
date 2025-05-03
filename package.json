@@ -10,6 +10,7 @@
     "whatsapp-web.js": "^1.27.0",
     "tesseract.js": "^5.0.1",
     "franc-min": "^6.2.0",
+    "puppeteer": "^22.1.1",
     "cors": "^2.8.5"
   }
 }
