@@ -2,10 +2,10 @@ const express = require('express');
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const Tesseract = require('tesseract.js');
 const franc = require('franc-min');
-const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
 const cors = require('cors');
+const { exec } = require('child_process');
 
 const app = express();
 app.use(cors());
@@ -13,13 +13,11 @@ app.use(express.json({ limit: '10mb' }));
 
 // WhatsApp client
 const client = new Client({
-  authStrategy: new LocalAuth(),
-  puppeteer: { headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] }
+  authStrategy: new LocalAuth()
 });
 
 client.on('qr', (qr) => {
   console.log('Scan this QR with WhatsApp:', qr);
-  // In production, view QR in Render logs or use a QR code generator
 });
 
 client.on('ready', () => {
@@ -29,38 +27,35 @@ client.on('ready', () => {
 client.on('message', async (message) => {
   if (message.hasMedia && message.type === 'image') {
     try {
-      // Notify user
       await message.reply('Processing your image...');
 
       // Download image
       const media = await message.downloadMedia();
       const imageBuffer = Buffer.from(media.data, 'base64');
 
-      // Save image temporarily (compressed)
+      // Save image
       const imagePath = path.join(__dirname, 'temp.jpg');
       fs.writeFileSync(imagePath, imageBuffer);
 
-      // Extract text
-      const { data: { text } } = await Tesseract.recognize(imagePath, 'eng+spa+fra+hin+jpn+ben', {
-        logger: () => {} // Disable verbose logging for speed
-      });
+      // OCR
+      const { data: { text } } = await Tesseract.recognize(imagePath, 'eng+spa+fra+hin+jpn+ben');
       if (!text.trim()) {
         await message.reply('No text detected in the image.');
         fs.unlinkSync(imagePath);
         return;
       }
 
-      // Detect language
+      // Language detection
       const langCode = franc(text, { minLength: 10 });
       const languageMap = {
-        'eng': 'en-US',
-        'spa': 'es-ES',
-        'fra': 'fr-FR',
-        'hin': 'hi-IN',
-        'jpn': 'ja-JP',
-        'ben': 'bn-IN'
+        'eng': 'en',
+        'spa': 'es',
+        'fra': 'fr',
+        'hin': 'hi',
+        'jpn': 'ja',
+        'ben': 'bn'
       };
-      const language = languageMap[langCode] || 'en-US';
+      const language = languageMap[langCode] || 'en';
 
       // Generate audio
       const audioPath = await generateAudio(text, language);
@@ -72,7 +67,7 @@ client.on('message', async (message) => {
         caption: 'Audio of extracted text'
       });
 
-      // Clean up
+      // Cleanup
       fs.unlinkSync(imagePath);
       fs.unlinkSync(audioPath);
     } catch (error) {
@@ -82,45 +77,18 @@ client.on('message', async (message) => {
   }
 });
 
-// Generate audio using Web Speech API via Puppeteer
+// Text-to-speech using gTTS
 async function generateAudio(text, language) {
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
-  });
-  const page = await browser.newPage();
-  const audioPath = path.join(__dirname, 'output.mp3');
+  return new Promise((resolve, reject) => {
+    const audioPath = path.join(__dirname, 'output.mp3');
+    const safeText = text.replace(/"/g, '\\"').replace(/\n/g, ' ');
+    const command = `gtts-cli "${safeText}" --lang ${language} --output "${audioPath}"`;
 
-  // Inject script to use Web Speech API
-  await page.setContent(`
-    <!DOCTYPE html>
-    <html>
-    <body>
-      <script>
-        window.speechSynthesis.onvoiceschanged = () => {
-          const utterance = new SpeechSynthesisUtterance('${text.replace(/'/g, "\\'")}');
-          utterance.lang = '${language}';
-          speechSynthesis.speak(utterance);
-        };
-      </script>
-    </body>
-    </html>
-  `);
-
-  // Wait for speech to complete (placeholder; no direct MP3 output)
-  await page.evaluate(async (text, lang) => {
-    return new Promise((resolve) => {
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = lang;
-      utterance.onend = () => resolve();
-      speechSynthesis.speak(utterance);
+    exec(command, (err) => {
+      if (err) return reject(err);
+      resolve(audioPath);
     });
-  }, text, language);
-
-  // Placeholder MP3 (Web Speech API doesn't output audio directly)
-  fs.writeFileSync(audioPath, Buffer.from(text)); // Replace with recorder in production
-  await browser.close();
-  return audioPath;
+  });
 }
 
 client.initialize();
