@@ -1,18 +1,12 @@
-import express from 'express';
-import chromium from 'chromium';
-import pkg from 'whatsapp-web.js';
-import Tesseract from 'tesseract.js';
-import puppeteer from 'puppeteer';
-import fs from 'fs';
-import path from 'path';
-import cors from 'cors';
-import { execSync } from 'child_process';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const { Client, LocalAuth } = pkg;
+const express = require('express');
+const { Client, LocalAuth } = require('whatsapp-web.js');
+const Tesseract = require('tesseract.js');
+const franc = require('franc-min');
+const puppeteer = require('puppeteer');
+const fs = require('fs');
+const path = require('path');
+const cors = require('cors');
+const { execSync } = require('child_process');
 
 const app = express();
 app.use(cors());
@@ -21,11 +15,8 @@ app.use(express.json({ limit: '10mb' }));
 // WhatsApp client
 const client = new Client({
   authStrategy: new LocalAuth()
-  puppeteer: {
-    executablePath: chromium.path, // <==>
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
-}
+  puppeteer: { headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] }
+});
 });
 
 client.on('qr', (qr) => {
@@ -57,7 +48,6 @@ client.on('message', async (message) => {
         return;
       }
 
-      const { default: franc } = await import('franc-min');
       const langCode = franc(text, { minLength: 10 });
       const languageMap = {
         'eng': 'en-US',
