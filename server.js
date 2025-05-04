@@ -1,4 +1,5 @@
 import express from 'express';
+import chromium from 'chromium';
 import pkg from 'whatsapp-web.js';
 import Tesseract from 'tesseract.js';
 import puppeteer from 'puppeteer';
