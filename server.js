@@ -15,8 +15,7 @@ app.use(express.json({ limit: '10mb' }));
 // WhatsApp client
 const client = new Client({
   authStrategy: new LocalAuth()
-  puppeteer: { headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] }
-});
+  
 });
 
 client.on('qr', (qr) => {
